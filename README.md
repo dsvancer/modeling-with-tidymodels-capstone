@@ -1,1 +1,1 @@
-# modeling-with-tidymodels-capstone
+# Modeling With *tidymodels* Capstone Project
