@@ -1,4 +1,4 @@
-# Modeling With *tidymodels* Capstone Project
+# Modeling with *tidymodels* Capstone Project
 
 Click the button below to launch an interactive RStudio environment within your browser.
 
