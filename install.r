@@ -1,1 +1,1 @@
-install.packages(c('knitr', 'rmarkdown', 'tidymodels'))
+install.packages(c("knitr", "rmarkdown", "tidymodels"))
