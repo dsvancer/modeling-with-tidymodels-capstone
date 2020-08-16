@@ -1,0 +1,154 @@
+---
+title: "Capstone Project"
+author: "David Svancer"
+output: html_document
+---
+
+
+# Load Data
+
+The code below will load the tidymodels package and import the *credit_data* tibble from the *modeldata* package.
+
+To keep computation times low, a small random sample of the data is taken.
+
+```{r}
+library(tidymodels)
+
+data("credit_data")
+
+# Take a smaller random sample of the data to speed up computation time
+# Target variable is Status - 'bad' or 'good'
+set.seed(314)
+credit_data <- credit_data %>% 
+               select(-Time) %>% 
+               sample_n(1000)
+```
+
+# Machine Learning Process
+
+The learner will be guided through a complete model development process. We will fit a decision tree classifier to predict whether a customer will have 'bad' or 'good' credit status.
+
+## Step 1
+
+We will split the data into a training and test set. The training data will be further divided into 5 folds for hyperparameter tuning.
+
+```{r}
+## Create a data split object and training/test sets
+set.seed(314)
+credit_split <- initial_split(credit_data)
+
+credit_train <- credit_split %>% training()
+credit_test <- credit_split %>% testing()
+
+### Create folds for cross validation on the training data set
+## These will be used to tune model hyperparameters
+set.seed(314)
+credit_folds <- vfold_cv(credit_train, v = 5)
+```
+
+## Step 2
+
+Next, we specify a decision tree classifier with the following hyperparameters: cost_complexity, tree_depth, and min_n.
+
+```{r}
+tree_model <- decision_tree(cost_complexity = tune(),
+                            tree_depth = tune(),
+                            min_n = tune()) %>% 
+              set_engine('rpart') %>% 
+              set_mode('classification')
+```
+
+## Step 3
+
+We will define a blueprint for feature engineering with the recipes packages. For every iteration of cross validation, we will perform the following tasks:
+
+- Impute missing values with KNN
+- Transform, center, and scale all numeric predictors
+- One-hot encode all nominal variables
+- Remove zero variance predictors
+
+```{r}
+credit_recipe <- recipe(Status ~ ., data = credit_train) %>%
+                 step_knnimpute(all_predictors()) %>% 
+                 step_YeoJohnson(all_numeric(), -all_outcomes()) %>% 
+                 step_center(all_numeric(), -all_outcomes()) %>% 
+                 step_scale(all_numeric(), -all_outcomes()) %>% 
+                 step_dummy(all_nominal(), -all_outcomes()) %>% 
+                 step_zv(all_predictors(), -all_outcomes())
+```
+
+## Step 4
+
+Next, we combine our model and recipe into a workflow to easily manage the model-building process.
+
+```{r}
+tree_workflow <- workflow() %>% 
+                 add_model(tree_model) %>% 
+                 add_recipe(credit_recipe)
+```
+
+## Step 5
+
+Hyperparameter tuning. We will perform a grid search on the decision tree hyperparameters and select the best performing model based on the area under the ROC curve during cross validation.
+
+```{r}
+## Create a grid of hyperparameter values to test
+tree_grid <- grid_regular(cost_complexity(),
+                          tree_depth(),
+                          min_n(), 
+                          levels = 3)
+```
+
+```{r}
+# View grid
+tree_grid
+```
+
+```{r}
+## Tune decision tree workflow
+set.seed(314)
+tree_tuning <- tree_workflow %>% 
+               tune_grid(resamples = credit_folds,
+                         grid = tree_grid)
+```
+
+
+```{r}
+## Show the top 5 best models based on roc_auc metric
+tree_tuning %>% show_best('roc_auc')
+```
+
+```{r}
+## Select best model based on roc_auc
+best_tree <- tree_tuning %>% 
+             select_best(metric = 'roc_auc')
+
+
+## Finalize workflow by adding the best performing model
+final_tree_workflow <- tree_workflow %>% 
+                       finalize_workflow(best_tree)
+```
+
+## Step 6
+Next we fit our final model workflow to the training data and evaluate performance on the test data. 
+
+The `last_fit()` function will fit our workflow to the training data and generate predictions on the test data as defined by our *credit_split* `rsample` object.
+
+```{r}
+tree_fit <- final_tree_workflow %>% 
+            last_fit(credit_split)
+```
+
+We can view our performance metrics on the test data
+```{r}
+tree_fit %>% collect_metrics()
+```
+
+We can plot the ROC curve to visualize test set performance of our tuned decision tree
+
+```{r}
+tree_fit %>% collect_predictions() %>% 
+             roc_curve(truth  = Status, estimate = .pred_bad) %>% 
+             autoplot()
+```
+
