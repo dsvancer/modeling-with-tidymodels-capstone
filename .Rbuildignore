@@ -1,0 +1,5 @@
+^.*\.Rproj$
+^\.Rproj\.user$
+^TidymodelsCapstone\.Rcheck$
+^TidymodelsCapstone.*\.tar\.gz$
+^TidymodelsCapstone.*\.tgz$

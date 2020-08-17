@@ -11,7 +11,7 @@ The code below will load the tidymodels package and import the *credit_data* tib
 
 To keep computation times low, a small random sample of the data is taken.
 
-```{r}
+```{r message = FALSE, warning = FALSE}
 library(tidymodels)
 
 data("credit_data")
@@ -21,7 +21,7 @@ data("credit_data")
 set.seed(314)
 credit_data <- credit_data %>% 
                select(-Time) %>% 
-               sample_n(1000)
+               sample_n(700)
 ```
 
 # Machine Learning Process
@@ -96,7 +96,7 @@ Hyperparameter tuning. We will perform a grid search on the decision tree hyperp
 tree_grid <- grid_regular(cost_complexity(),
                           tree_depth(),
                           min_n(), 
-                          levels = 3)
+                          levels = 2)
 ```
 
 ```{r}
@@ -130,6 +130,7 @@ final_tree_workflow <- tree_workflow %>%
 ```
 
 ## Step 6
+
 Next we fit our final model workflow to the training data and evaluate performance on the test data. 
 
 The `last_fit()` function will fit our workflow to the training data and generate predictions on the test data as defined by our *credit_split* `rsample` object.
