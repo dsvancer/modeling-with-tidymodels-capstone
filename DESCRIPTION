@@ -1,0 +1,11 @@
+Package: TidymodelsCapstone
+Version: 0.1
+Date: 2020-08-17
+Description: Tidymodels Capstone Project
+Author: David Svancer
+Depends:
+    R (>= 4.0.2)
+Imports:
+    tidymodels,
+    knitr,
+    rmarkdown
